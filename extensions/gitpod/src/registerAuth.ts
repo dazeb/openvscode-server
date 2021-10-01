@@ -130,17 +130,9 @@ export async function addAuthProviderToSettings(): Promise<void> {
 	}
 }
 
-
-/**
- * Returns a promise that resolves with the current authentication session of the provided access token. This includes the token itself, the scopes, the user's ID and name.
- * @param accessToken the access token used to authenticate the Gitpod WS connection
- * @param scopes the scopes the authentication session must have
- * @returns a promise that resolves with the authentication session
- */
-export async function resolveAuthenticationSession(scopes: readonly string[], accessToken: string): Promise<vscode.AuthenticationSession> {
+async function createApiWebSocket(accessToken: string) {
 	const factory = new JsonRpcProxyFactory<GitpodServer>();
 	const gitpodService: GitpodConnection = new GitpodServiceImpl<GitpodClient, GitpodServer>(factory.createProxy()) as any;
-
 	const pendignWebSocket = (async () => {
 		class GitpodServerWebSocket extends WebSocket {
 			constructor(address: string, protocols?: string | string[]) {
@@ -168,9 +160,20 @@ export async function resolveAuthenticationSession(scopes: readonly string[], ac
 		});
 		return webSocket;
 	})();
+
+	return { gitpodService, pendignWebSocket };
+}
+
+
+/**
+ * Returns a promise that resolves with the current authentication session of the provided access token. This includes the token itself, the scopes, the user's ID and name.
+ * @param accessToken the access token used to authenticate the Gitpod WS connection
+ * @param scopes the scopes the authentication session must have
+ * @returns a promise that resolves with the authentication session
+ */
+export async function resolveAuthenticationSession(scopes: readonly string[], accessToken: string): Promise<vscode.AuthenticationSession> {
+	const { gitpodService, pendignWebSocket } = await createApiWebSocket(accessToken);
 	const user = await gitpodService.server.getLoggedInUser();
-	const hash = crypto.createHash('sha256').update(accessToken, 'utf8').digest('hex');
-	gitpodService.server.getGitpodTokenScopes(hash);
 	(await pendignWebSocket).close();
 	return {
 		id: 'gitpod.user',
@@ -191,6 +194,17 @@ export async function resolveAuthenticationSession(scopes: readonly string[], ac
  */
 function hasScopes(session: vscode.AuthenticationSession, scopes?: readonly string[]): boolean {
 	return !scopes || scopes.every(scope => session.scopes.includes(scope));
+}
+
+/**
+ * @returns all of the scopes accessible for `accessToken`
+ */
+export async function checkScopes(accessToken: string) {
+	const { gitpodService, pendignWebSocket } = await createApiWebSocket(accessToken);
+	const hash = crypto.createHash('sha256').update(accessToken, 'utf8').digest('hex');
+	const scopes = await gitpodService.server.getGitpodTokenScopes(hash);
+	(await pendignWebSocket).close();
+	return scopes;
 }
 
 /**
