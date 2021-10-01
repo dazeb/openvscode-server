@@ -153,11 +153,9 @@ export async function resolveAuthenticationSession(scopes: readonly string[], ac
 			}
 		}
 		const webSocket = new ReconnectingWebSocket(baseURL.replace('https', 'wss'), undefined, {
-			maxReconnectionDelay: 10000,
 			minReconnectionDelay: 1000,
-			reconnectionDelayGrowFactor: 1.3,
 			connectionTimeout: 10000,
-			maxRetries: Infinity,
+			maxRetries: 10,
 			debug: false,
 			startClosed: false,
 			WebSocket: GitpodServerWebSocket
@@ -261,10 +259,18 @@ function registerAuth(context: vscode.ExtensionContext, logger: (value: string) 
 			}, 1000 * 60 * 5); // 5 minutes
 		});
 
+		const searchParams = new URLSearchParams(redirectUri.search);
+		/*
+		searchParams.forEach(function (value, key) {
+			searchParams.set(key, encodeURIComponent(value));
+		});
+		*/
+		redirectUri.search = searchParams.toString();
+		logger(searchParams.toString());
 		// Open the authorization URL in the default browser
 		const authURI = vscode.Uri.from({ scheme: redirectUri.protocol.slice(0, -1), authority: redirectUri.hostname, path: redirectUri.pathname, query: redirectUri.search.slice(1) });
 		logger(`Opening browser at ${authURI.toString(true)}`);
-		const opened = await vscode.env.openExternal(authURI);
+		const opened = await vscode.env.openExternal(vscode.Uri.parse(authURI.toString(true)));
 		if (!opened) {
 			const selected = await vscode.window.showErrorMessage(`Couldn't open ${authURI.toString(true)} automatically, please copy and paste it to your browser manually.`, 'Copy', 'Cancel');
 			if (selected === 'Copy') {
