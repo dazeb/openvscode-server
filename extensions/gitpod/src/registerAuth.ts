@@ -260,17 +260,13 @@ function registerAuth(context: vscode.ExtensionContext, logger: (value: string) 
 		});
 
 		const searchParams = new URLSearchParams(redirectUri.search);
-		/*
-		searchParams.forEach(function (value, key) {
-			searchParams.set(key, encodeURIComponent(value));
-		});
-		*/
+
 		redirectUri.search = searchParams.toString();
 		logger(searchParams.toString());
 		// Open the authorization URL in the default browser
 		const authURI = vscode.Uri.from({ scheme: redirectUri.protocol.slice(0, -1), authority: redirectUri.hostname, path: redirectUri.pathname, query: redirectUri.search.slice(1) });
 		logger(`Opening browser at ${authURI.toString(true)}`);
-		const opened = await vscode.env.openExternal(vscode.Uri.parse(authURI.toString(true)));
+		const opened = await vscode.env.openExternal(authURI);
 		if (!opened) {
 			const selected = await vscode.window.showErrorMessage(`Couldn't open ${authURI.toString(true)} automatically, please copy and paste it to your browser manually.`, 'Copy', 'Cancel');
 			if (selected === 'Copy') {
