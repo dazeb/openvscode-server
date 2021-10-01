@@ -1011,6 +1011,13 @@ export async function main(options: IServerOptions): Promise<void> {
 		let port = 3000;
 		if (parsedArgs.port) {
 			port = Number(parsedArgs.port);
+			if (isNaN(port)) {
+				logService.error('Port must be a number.');
+				process.exit(1);
+			} else if (!(port >= 0 && port < 65536)) {
+				logService.error('Port out of range.');
+				process.exit(1);
+			}
 		} else if (typeof options.port === 'number') {
 			port = options.port;
 		}
@@ -1018,8 +1025,9 @@ export async function main(options: IServerOptions): Promise<void> {
 		const host = parsedArgs.host || '0.0.0.0';
 		server.on('error', () => {
 			server.close();
-			process.exit();
+			process.exit(1);
 		});
+
 		server.listen(port, host, () => {
 			const addressInfo = server.address() as net.AddressInfo;
 			const address = addressInfo.address === '0.0.0.0' || addressInfo.address === '127.0.0.1' ? 'localhost' : addressInfo.address;
