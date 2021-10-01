@@ -130,7 +130,7 @@ export async function addAuthProviderToSettings(): Promise<void> {
 	}
 }
 
-async function createApiWebSocket(accessToken: string) {
+async function createApiWebSocket(accessToken: string): Promise<{ gitpodService: GitpodConnection; pendignWebSocket: Promise<ReconnectingWebSocket>; }> {
 	const factory = new JsonRpcProxyFactory<GitpodServer>();
 	const gitpodService: GitpodConnection = new GitpodServiceImpl<GitpodClient, GitpodServer>(factory.createProxy()) as any;
 	const pendignWebSocket = (async () => {
@@ -199,7 +199,7 @@ function hasScopes(session: vscode.AuthenticationSession, scopes?: readonly stri
 /**
  * @returns all of the scopes accessible for `accessToken`
  */
-export async function checkScopes(accessToken: string) {
+export async function checkScopes(accessToken: string): Promise<string[]> {
 	const { gitpodService, pendignWebSocket } = await createApiWebSocket(accessToken);
 	const hash = crypto.createHash('sha256').update(accessToken, 'utf8').digest('hex');
 	const scopes = await gitpodService.server.getGitpodTokenScopes(hash);
