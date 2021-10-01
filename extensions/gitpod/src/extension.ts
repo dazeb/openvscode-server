@@ -388,7 +388,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				return;
 			} else if (uri.path === '/complete-gitpod-auth') {
 				// Get the token from the URI
-				const token = new URLSearchParams(uri.query).get('token');
+				const token = new URLSearchParams(uri.query).get('code');
 				if (token !== null) {
 					const authSession = await resolveAuthenticationSession(scopes, token);
 					await context.secrets.store('gitpod.authSession', JSON.stringify(authSession));
